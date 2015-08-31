@@ -3,10 +3,30 @@
 <html>
 
 <head>
+	<style>
+		#output {
+			font-family: "Lucida Console", Monaco, monospace
+		}
+	</style>
 </head>
 
 <body>
+	<input id = 'formula'></input>
+	<p id = 'output'></p>
+
 	<script src = 'parser.js'></script>
+	<script>
+		var formula = document.getElementById('formula');
+		var output = document.getElementById('output');
+		var run = function() {
+			output.innerHTML = parse(formula.value, []).toString();
+		};
+		
+		formula.addEventListener('change', run);
+		run();
+		
+		console.log(parse('x + y * x', 'x,y'.split(','))(4, 2));
+	</script>
 </body>
 
 </html>

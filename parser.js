@@ -3,10 +3,10 @@ var parse = (function() {
 	var BRACE_CLOSE = ')';
 	
 	var parse = function(str, args) {
-		for (var i in parse.prefix)
-			str = str.replace(i, parse.prefix[i]);
-		for (var i in parse.infix)
-		return new Function(args, str);
+		//for (var i in parse.infix)
+		//for (var i in parse.prefix)
+		//	str = str.replace(i, parse.prefix[i]);
+		return new Function(args, 'return ' + str + ';');
 	};
 	
 	parse.prefix = {
