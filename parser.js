@@ -4,8 +4,9 @@ var parse = (function() {
 	
 	var parse = function(str, args) {
 		//for (var i in parse.infix)
-		//for (var i in parse.prefix)
-		//	str = str.replace(i, parse.prefix[i]);
+		str = str.replace(prefixRE, function(key) {
+			return parse.prefix[key];
+		});
 		return new Function(args, 'return ' + str + ';');
 	};
 	
@@ -19,6 +20,8 @@ var parse = (function() {
 		'PI': 'Math.PI',
 		'E': 'Math.E'
 	};
+	
+	var prefixRE = new RegExp('\\b' + Object.keys(parse.prefix).join('|') + '\\b', 'g');
 	
 	parse.infix = {
 		'^': 'Math.pow'
