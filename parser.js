@@ -1,16 +1,12 @@
-var parse = (function() {
+var parser = (function() {
 	// constants
 	var BRACE_OPEN = '(';
 	var BRACE_CLOSE = ')';
 	
 	
-	// data
-	// fail: relies on global object
-	var prefixRE = null;
-	
 	// utils
-	var init = function() {
-		prefixRE = prefixRE || new RegExp('\\b' + Object.getOwnPropertyNames(prefix).join('|') + '\\b', 'g');
+	var orRegExp = function(obj, regex) {
+		regex = new RegExp('\\b' + Object.getOwnPropertyNames(obj).join('|') + '\\b', 'g');
 	};
 	
 	var merge = function (src, targ) {
@@ -48,47 +44,45 @@ var parse = (function() {
 				return -1;			
 		}
 	};
+	
+	// Public API
+	//   prefix is a context for produced functions
+	//   infix maps infix operators to names of binary functions
+	// returns function parse(str, args):
+	//   str a string
+	//   returns a js Funciton
+	return function(prefix, infix) {
+		prefix = prefix || merge({}, Math);
 		
-	var prefix = merge({}, Math);
+		infix = infix || { '^': 'pow' };
+		
+		var prefixRE = null;
 	
-	var infix = {
-		'^': 'pow'
-	};	
-	
-	// interface
-	var parse = function(str, args) {
-		init();
-		for (var key in infix) {
-			var i = -1;
-			var k = 0;
-			while (true) {
-				i = str.indexOf(key, k);
-				if (i === -1 || i > 100)
-					break;
-				var j = matchBraces(str, i, -1);
-				var k = matchBraces(str, i, 1);
-				str = str.slice(0, j) + infix[key] + '(' +
-					str.slice(j, i) + ',' + str.slice(i + 1, k + 1) + ')' +
-					str.slice(k + 1);
+		// interface
+		return function(str, args) {
+			prefixRE = orRegExp(prefix, prefixRE);
+			for (var key in infix) {
+				var i = -1;
+				var k = 0;
+				while (true) {
+					i = str.indexOf(key, k);
+					if (i === -1 || i > 100)
+						break;
+					var j = matchBraces(str, i, -1);
+					var k = matchBraces(str, i, 1);
+					str = str.slice(0, j) + infix[key] + '(' +
+						str.slice(j, i) + ',' + str.slice(i + 1, k + 1) + ')' +
+						str.slice(k + 1);
+				}
 			}
-		}
-		str = str.replace(prefixRE, function(key) {
-			return 'cont["' + key + '"]';
-		});
-		args = args.slice();
-		args.push('cont');
-		console.log(str);
-		var unbound = new Function(args, 'cont', 'return ' + str + ';');
-		return bindn(args.length)(unbound, prefix);
-	};
-	
-	parse.setup = function(config) {
-		config = config || {};
-		merge(config.prefix || {}, prefix);
-		merge(config.infix || {}, infix);
-		return parse
-	};
-	
-	
-	return parse;
+			str = str.replace(prefixRE, function(key) {
+				return 'cont["' + key + '"]';
+			});
+			args = args.slice();
+			args.push('cont');
+			console.log(str);
+			var unbound = new Function(args, 'cont', 'return ' + str + ';');
+			return bindn(args.length)(unbound, prefix);
+		};
+	}
 }());

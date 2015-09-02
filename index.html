@@ -19,6 +19,8 @@
 	<script>
 		var formula = document.getElementById('formula');
 		var output = document.getElementById('output');
+		var parse = parser(Math, { '^': 'pow' });
+		
 		var run = function() {
 			output.innerHTML = parse(formula.value, []).toString();
 		};
