@@ -8,30 +8,15 @@ var parse = (function() {
 	// fail: relies on global object
 	var prefixRE = null;
 	
-	var prefix = {
-		'sin': Math.sin,
-		'cos': Math.cos,
-		'tan': Math.tan,
-		'exp': Math.exp,
-		'log': Math.log,
-		'pow': Math.pow,
-		
-		'PI': Math.PI,
-		'E': Math.E
-	};
-	
-	var infix = {
-		'^': 'pow'
-	};	
-	
 	// utils
 	var init = function() {
-		prefixRE = prefixRE || new RegExp('\\b' + Object.keys(prefix).join('|') + '\\b', 'g');
+		prefixRE = prefixRE || new RegExp('\\b' + Object.getOwnPropertyNames(prefix).join('|') + '\\b', 'g');
 	};
 	
 	var merge = function (src, targ) {
 		for (var key in src)
 			targ[key] = src[key];
+		return targ;
 	};
 	
 	var bindn = function(nArgs) {
@@ -63,6 +48,12 @@ var parse = (function() {
 				return -1;			
 		}
 	};
+		
+	var prefix = merge({}, Math);
+	
+	var infix = {
+		'^': 'pow'
+	};	
 	
 	// interface
 	var parse = function(str, args) {
@@ -86,6 +77,7 @@ var parse = (function() {
 		});
 		args = args.slice();
 		args.push('cont');
+		console.log(str);
 		var unbound = new Function(args, 'cont', 'return ' + str + ';');
 		return bindn(args.length)(unbound, prefix);
 	};
