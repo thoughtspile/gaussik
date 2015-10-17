@@ -1,5 +1,5 @@
 var assert = require('assert');
-var parser = require(__dirname + '/parser.js');
+var parser = require(__dirname + '/../parser.js');
 
 
 assert(parser instanceof Function, 'Parser factory exists');
