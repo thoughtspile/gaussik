@@ -2,87 +2,100 @@ var parser = (function() {
 	// constants
 	var BRACE_OPEN = '(';
 	var BRACE_CLOSE = ')';
-	
-	
+	var alphaNumRE = /[a-zA-Z0-9_$]/;
+
+
 	// utils
-	var orRegExp = function(obj, regex) {
-		regex = new RegExp('\\b' + Object.getOwnPropertyNames(obj).join('|') + '\\b', 'g');
+	var isAlphaNum = function(ch) {
+		return ch != null && alphaNumRE.test(ch);
 	};
-	
-	var merge = function (src, targ) {
-		for (var key in src)
-			targ[key] = src[key];
-		return targ;
-	};
-	
-	var bindn = function(nArgs) {
-		var argNames = new Array(nArgs);
-		for (var i = 0; i < nArgs; i++)
-			argNames[i] = 'a' + i;
-		var argStr = argNames.join(',');
-		return new Function('fn', 'cont',
-			'return function(' + argStr +') { ' +
-			'return fn(' + argStr + ', cont); }'
+
+	var nBinder = function(nArgs) {
+		var argStr = '';
+		for (var i = 0; i < nArgs - 1; i++)
+			argStr += (i > 0? ', ': '') + 'a' + i;
+		return new Function('fn', 'extra',
+			'return function(' + argStr + ') { ' +
+				'return fn(extra' + (nArgs > 1? ',' + argStr: '') + '); }'
 		);
 	};
-	
-	// need more care here
+
 	var matchBraces = function(str, pos, dir) {
 		var depth = 0;
-		var i = pos + dir;
-		while (true) {
-			if (str[i] === BRACE_OPEN)
+		for (var i = pos + dir; str[i] != null; i += dir) {
+			if (str[i] == BRACE_OPEN)
 				depth++;
-			else if (str[i] === BRACE_CLOSE)
+			else if (str[i] == BRACE_CLOSE)
 				depth--;
-			
 			if (depth === 0)
 				return i;
-			
-			i += dir;
-			if (i >= str.length || i < 0)
-				return -1;			
 		}
+		return pos;
 	};
-	
+
+	var captureId = function(str, pos, dir) {
+		for (var i = pos; isAlphaNum(str[i + dir]); i += dir);
+		return i;
+	}
+
+	var deinfix = function(str, infixOp, subs) {
+		var opPos = -1;
+		while (true) {
+			opPos = str.indexOf(infixOp, opPos + 1);
+			if (opPos == -1)
+				break;
+			var start = captureId(str, matchBraces(str, opPos, -1), -1);
+			var end = matchBraces(str, captureId(str, opPos, 1), 1);
+			str = str.slice(0, start) + subs + '(' +
+				str.slice(start, opPos) + ',' +
+				str.slice(opPos + 1, end + 1) + ')' +
+				str.slice(end + 1);
+		}
+		return str;
+	}
+
+	var scopify = function(expr, name) {
+		return expr.replace(
+			new RegExp('^' + name + '\\b|([+\\-\\/\\^,;|&({[ ])' + name + '\\b', 'g'),
+			'$1cont["' + name + '"]'
+		);
+	};
+
+
 	// Public API
-	//   prefix is a context for produced functions
-	//   infix maps infix operators to names of binary functions
+	//   prefix fakes function "scope", as in { 'cos': Math.cos }
+	//   infix maps infix operators to binary function names, as in { '^': 'pow'}
 	// returns function parse(str, args):
-	//   str a string
-	//   returns a js Funciton
-	return function(prefix, infix) {
-		prefix = prefix || merge({}, Math);
-		
-		infix = infix || { '^': 'pow' };
-		
-		var prefixRE = null;
-	
+	//   str: expression String
+	//   args: Array of argument names
+	//   returns: Function
+	var parse = function(prefix, infix) {
+		prefix = prefix || {};
+		infix = infix || {};
+
 		// interface
 		return function(str, args) {
-			prefixRE = orRegExp(prefix, prefixRE);
-			for (var key in infix) {
-				var i = -1;
-				var k = 0;
-				while (true) {
-					i = str.indexOf(key, k);
-					if (i === -1 || i > 100)
-						break;
-					var j = matchBraces(str, i, -1);
-					var k = matchBraces(str, i, 1);
-					str = str.slice(0, j) + infix[key] + '(' +
-						str.slice(j, i) + ',' + str.slice(i + 1, k + 1) + ')' +
-						str.slice(k + 1);
-				}
-			}
-			str = str.replace(prefixRE, function(key) {
-				return 'cont["' + key + '"]';
-			});
-			args = args.slice();
-			args.push('cont');
-			console.log(str);
-			var unbound = new Function(args, 'cont', 'return ' + str + ';');
-			return bindn(args.length)(unbound, prefix);
+			str = str.replace(/ /g, '');
+			args = args || [];
+			args = Array.isArray(args)? args: args.replace(/ /g, '').split(',');
+
+			for (var key in infix)
+				str = deinfix(str, key, infix[key]);
+
+			for (var key in prefix)
+				if (args.indexOf(key) === -1)
+					str = scopify(str, key);
+
+			return nBinder(args.length + 1)(
+				new Function(['cont'].concat(args), 'return ' + str + ';'),
+				prefix);
 		};
-	}
+	};
+
+
+	// export
+	if (typeof module !== 'undefined' && module.exports)
+        module.exports = parse;
+    if (typeof window !== 'undefined')
+        window.parse = parse;
 }());
