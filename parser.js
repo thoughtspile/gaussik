@@ -1,4 +1,4 @@
-var parser = (function() {
+(function() {
 	// constants
 	var BRACE_OPEN = '(';
 	var BRACE_CLOSE = ')';
@@ -97,5 +97,5 @@ var parser = (function() {
 	if (typeof module !== 'undefined' && module.exports)
         module.exports = parse;
     if (typeof window !== 'undefined')
-        window.parse = parse;
+        window.parser = parse;
 }());
