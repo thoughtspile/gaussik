@@ -7,7 +7,7 @@
 
 	// utils
 	var isAlphaNum = function(ch) {
-		return ch != null && alphaNumRE.test(ch);
+		return ch !== null && alphaNumRE.test(ch);
 	};
 
 	var nBinder = function(nArgs) {
@@ -36,7 +36,7 @@
 	var captureId = function(str, pos, dir) {
 		for (var i = pos; isAlphaNum(str[i + dir]); i += dir);
 		return i;
-	}
+	};
 
 	var deinfix = function(str, infixOp, subs) {
 		var opPos = -1;
@@ -52,7 +52,7 @@
 				str.slice(end + 1);
 		}
 		return str;
-	}
+	};
 
 	var scopify = function(expr, name) {
 		return expr.replace(
