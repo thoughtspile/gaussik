@@ -18,14 +18,18 @@
 		return ch !== void 0 && alphaNumRE.test(ch);
 	};
 
-	function nBinder(nArgs) {
+	function nBinder(fn) {
+		// FIXME only binds one argument
+		var bound = Array.prototype.slice.call(arguments, 1);
+		var nArgs = fn.length;
 		var argStr = '';
 		for (var i = 0; i < nArgs - 1; i++)
-			argStr += (i > 0? ', ': '') + 'a' + i;
-		return new Function('fn', 'extra',
+			argStr += (i > 0? ',': '') + 'a' + i;
+		var temp = Function('fn', 'scope',
 			'return function(' + argStr + ') { ' +
-				'return fn(extra' + (nArgs > 1? ',' + argStr: '') + '); }'
+				'return fn(scope' + (nArgs > 1? ',' + argStr: '') + '); }'
 		);
+		return temp.apply(null, [fn].concat(bound));
 	};
 
 	function matchBraces(str, pos, dir, rootPrecedence) {
@@ -102,15 +106,12 @@
 			if (!Array.isArray(args)) args = args.replace(/\s+/g, '').split(',');
 			str = str.replace(/\s+/g, ''); // FIXME <keyword> <id> as in var x
 
-			config.ops.forEach(op => {
-				str = deinfix(str, op, config.infix[op]);
-			})
+			for (var i = 0; i < config.ops.length; i++)
+				str = deinfix(str, config.ops[i], config.infix[config.ops[i]]);
 			for (var key in config.prefix)
 				if (args.indexOf(key) === -1)
 					str = scopify(str, key);
-			return nBinder(args.length + 1)(
-				Function(['cont'].concat(args), 'return ' + str + ';'),
-				config.prefix);
+			return nBinder(Function(['cont'].concat(args), 'return ' + str + ';'), config.prefix);
 		};
 	};
 
