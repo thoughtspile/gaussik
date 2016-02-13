@@ -115,6 +115,19 @@
 		};
 	};
 
+	// TODO
+	// - [ ] literal preprocessing (convert 4 to some object)
+	// - [ ] custom keywords (as in i the imaginary unit)
+	// - [ ] operators as functions
+	// - [ ] unaries
+	// - [ ] array / object literal overloads
+	// - sanitization
+	//   - [ ] argument names
+	//   - [ ] source
+	// - [ ] unsealed scope warning
+	// - [ ] custom precedence
+	// - [ ] right-associativity
+
 
 	// export
 	if (typeof module !== 'undefined' && module.exports)
