@@ -3,13 +3,21 @@
 	var BRACE_OPEN = '(';
 	var BRACE_CLOSE = ')';
 	var alphaNumRE = /[a-zA-Z0-9_$\[\]\,]/;
+
+	function Operator(prec, assoc) {
+		if (!(this instanceof Operator))
+			return new Operator(prec, assoc);
+		this.precedence = prec;
+		this.associative = assoc || 'left';
+	}
+
 	var ops = {
-		'+': { precedence: 13 },
-		'-': { precedence: 13 },
-		'*': { precedence: 14 },
-		'/': { precedence: 14 },
-		'%': { precedence: 14 },
-		'^': { precedence: 15 }, // FIXME 14 according to spec, and right-associative
+		'+': Operator(13),
+		'-': Operator(13),
+		'*': Operator(14),
+		'/': Operator(14),
+		'%': Operator(14),
+		'^': Operator(15, 'right'), // FIXME 14 according to spec
 	};
 
 
