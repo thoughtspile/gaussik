@@ -6,11 +6,11 @@
 
 
 	// utils
-	var isAlphaNum = function(ch) {
-		return ch !== null && alphaNumRE.test(ch);
+	function isAlphaNum(ch) {
+		return ch !== void 0 && alphaNumRE.test(ch);
 	};
 
-	var nBinder = function(nArgs) {
+	function nBinder(nArgs) {
 		var argStr = '';
 		for (var i = 0; i < nArgs - 1; i++)
 			argStr += (i > 0? ', ': '') + 'a' + i;
@@ -20,7 +20,7 @@
 		);
 	};
 
-	var matchBraces = function(str, pos, dir) {
+	function matchBraces(str, pos, dir) {
 		var depth = 0;
 		for (var i = pos + dir; str[i] != null; i += dir) {
 			if (str[i] == BRACE_OPEN)
@@ -33,12 +33,13 @@
 		return pos;
 	};
 
-	var captureId = function(str, pos, dir) {
-		for (var i = pos; isAlphaNum(str[i + dir]); i += dir);
+	function captureId(str, pos, dir) {
+		var i = pos;
+		while (isAlphaNum(str[i + dir])) i += dir;
 		return i;
 	};
 
-	var deinfix = function(str, infixOp, subs) {
+	function deinfix(str, infixOp, subs) {
 		var opPos = -1;
 		while (true) {
 			opPos = str.indexOf(infixOp, opPos + 1);
@@ -54,7 +55,7 @@
 		return str;
 	};
 
-	var scopify = function(expr, name) {
+	function scopify(expr, name) {
 		return expr.replace(
 			new RegExp('^' + name + '\\b|([+\\-\\/\\^,;|&({[ ])' + name + '\\b', 'g'),
 			'$1cont["' + name + '"]'
@@ -69,26 +70,33 @@
 	//   str: expression String
 	//   args: Array of argument names
 	//   returns: Function
-	var parse = function(prefix, infix) {
-		prefix = prefix || {};
-		infix = infix || {};
+	var parse = function (configDirty) {
+		configDirty = configDirty || {};
+		var config = {
+			prefix: configDirty.prefix || {},
+			infix: configDirty.infix || {},
+			literalProcessor: configDirty.literalProcessor || function (x) { return x; },
+		};
 
 		// interface
-		return function(str, args) {
-			str = str.replace(/ /g, '');
+		return function(args, str) {
+			if (str === void 0) {
+				str = args;
+				args = [];
+			}
 			args = args || [];
-			args = Array.isArray(args)? args: args.replace(/ /g, '').split(',');
+			if (!Array.isArray(args)) args = args.replace(/\s+/g, '').split(',');
+			str = str.replace(/\s+/g, ''); // FIXME <keyword> <id> as in var x
 
-			for (var key in infix)
-				str = deinfix(str, key, infix[key]);
-
-			for (var key in prefix)
+			for (var key in config.infix) {
+				str = deinfix(str, key, config.infix[key]);
+			}
+			for (var key in config.prefix)
 				if (args.indexOf(key) === -1)
 					str = scopify(str, key);
-
 			return nBinder(args.length + 1)(
-				new Function(['cont'].concat(args), 'return ' + str + ';'),
-				prefix);
+				Function(['cont'].concat(args), 'return ' + str + ';'),
+				config.prefix);
 		};
 	};
 
@@ -96,6 +104,6 @@
 	// export
 	if (typeof module !== 'undefined' && module.exports)
         module.exports = parse;
-    if (typeof window !== 'undefined')
-        window.parser = parse;
+  if (typeof window !== 'undefined')
+    window.parser = parse;
 }());
