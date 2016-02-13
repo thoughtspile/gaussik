@@ -82,7 +82,51 @@ tap('Operators', (t) => {
   t.equal(multiId(2,3), 8, 'Power args can contain multiple chars');
 
   var fnPow = powParser('pow(2, pow(1, 1))^pow(2, 1)');
-  t.equal(fnPow(), 4, 'Power args can be functions')
+  t.equal(fnPow(), 4, 'Power args can be functions with multiple arguments')
+
+  var multiOccurrence = powParser('2 ^ 2 ^ 2');
+  t.equal(multiOccurrence(), 16, '2 chained operators work');
+
+  var multiOccurrence = powParser('2 ^ 2 ^ 2 ^ 2');
+  t.equal(multiOccurrence(), 256, '3 chained operators work');
 
   t.end()
 });
+
+tap('Array operators', (t) => {
+  var vecParser = parser({
+    prefix: { 'pow': Math.pow, 'add': add },
+    infix: { '+': 'add'}
+  });
+
+  function add(a,b) { return [a[0] + b[0], a[1] + b[1]]; };
+  var vecAdd45 = vecParser('x', 'x + [4, 5]');
+  t.deepEqual(vecAdd45([1,2]), [5,7], 'Vector addition overloaded')
+
+  t.end()
+});
+
+tap('Operator precedence', (t) => {
+  var stringify = parser({
+    prefix: {
+      'times': (x, y) => x * y,
+      'add': (x, y) => x + y,
+      'pow': Math.pow
+    },
+    infix: { '+': 'add', '*': 'times', '^': 'pow'}
+  });
+
+  var saddt = stringify('x, y', 'x + y * x');
+  t.equal(saddt(2,2), 6, 'Precedence: *, +');
+
+  var saddt = stringify('x, y', 'x * y + x');
+  t.equal(saddt(2,2), 6, 'Precedence: *, + inverted');
+
+  var saddt = stringify('x, y', 'y * x ^ y');
+  t.equal(saddt(2,2), 8, 'Precedence: *, ^')
+
+  var saddt = stringify('x, y', 'y * (x + y)');
+  t.equal(saddt(2,2), 8, 'Precedence with braces')
+
+  t.end()
+})

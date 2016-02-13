@@ -2,7 +2,15 @@
 	// constants
 	var BRACE_OPEN = '(';
 	var BRACE_CLOSE = ')';
-	var alphaNumRE = /[a-zA-Z0-9_$]/;
+	var alphaNumRE = /[a-zA-Z0-9_$\[\]\,]/;
+	var ops = {
+		'+': { precedence: 13 },
+		'-': { precedence: 13 },
+		'*': { precedence: 14 },
+		'/': { precedence: 14 },
+		'%': { precedence: 14 },
+		'^': { precedence: 15 }, // FIXME 14 according to spec, and right-associative
+	};
 
 
 	// utils
@@ -20,8 +28,10 @@
 		);
 	};
 
-	function matchBraces(str, pos, dir) {
+	function matchBraces(str, pos, dir, rootPrecedence) {
 		var depth = 0;
+		if (str[pos + dir] in ops && ops[str[pos + dir]].precedence <= rootPrecedence)
+			return pos;
 		for (var i = pos + dir; str[i] != null; i += dir) {
 			if (str[i] == BRACE_OPEN)
 				depth++;
@@ -41,12 +51,14 @@
 
 	function deinfix(str, infixOp, subs) {
 		var opPos = -1;
+		var prec = ops[infixOp].precedence;
 		while (true) {
 			opPos = str.indexOf(infixOp, opPos + 1);
 			if (opPos == -1)
 				break;
-			var start = captureId(str, matchBraces(str, opPos, -1), -1);
-			var end = matchBraces(str, captureId(str, opPos, 1), 1);
+			var start = captureId(str, matchBraces(str, opPos, -1, prec), -1);
+			var end = matchBraces(str, captureId(str, opPos, 1), 1, prec);
+
 			str = str.slice(0, start) + subs + '(' +
 				str.slice(start, opPos) + ',' +
 				str.slice(opPos + 1, end + 1) + ')' +
@@ -77,6 +89,8 @@
 			infix: configDirty.infix || {},
 			literalProcessor: configDirty.literalProcessor || function (x) { return x; },
 		};
+		config.ops = Object.keys(config.infix)
+			.sort((x,y) => ops[y].precedence - ops[x].precedence);
 
 		// interface
 		return function(args, str) {
@@ -88,9 +102,9 @@
 			if (!Array.isArray(args)) args = args.replace(/\s+/g, '').split(',');
 			str = str.replace(/\s+/g, ''); // FIXME <keyword> <id> as in var x
 
-			for (var key in config.infix) {
-				str = deinfix(str, key, config.infix[key]);
-			}
+			config.ops.forEach(op => {
+				str = deinfix(str, op, config.infix[op]);
+			})
 			for (var key in config.prefix)
 				if (args.indexOf(key) === -1)
 					str = scopify(str, key);
