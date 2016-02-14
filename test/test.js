@@ -62,6 +62,11 @@ tap('Regression', (t) => {
 
   var partialMatch = cosParser('api, pib', 'api + pib');
   t.equal(partialMatch(1, 1), 2, 'Partial matches are not prefixed')
+
+  var powParser = parser({ prefix: { 'pow': Math.pow }, infix: { '^': 'pow' } });
+
+  t.deepEqual(powParser('[2^2,2^2]')(), [4,4], 'Operator does not capture comma')
+
   t.end()
 })
 
@@ -83,11 +88,11 @@ tap('Operators', (t) => {
   var fnPow = powParser('pow(2, pow(1, 1))^pow(2, 1)');
   t.equal(fnPow(), 4, 'Power args can be functions with multiple arguments')
 
-  var multiOccurrence = powParser('2 ^ 2 ^ 2');
-  t.equal(multiOccurrence(), 16, '2 chained operators work'); // FIXME power is right-associative
+  var multiOccurrence = powParser('2 ^ 2 ^ 3');
+  t.equal(multiOccurrence(), 256, '^ is right-to-left');
 
   var multiOccurrence = powParser('2 ^ 2 ^ 2 ^ 2');
-  t.equal(multiOccurrence(), 256, '3 chained operators work');
+  t.equal(multiOccurrence(), 65536, '3 chained ^');
 
   t.end()
 });

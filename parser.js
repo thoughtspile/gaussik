@@ -1,23 +1,26 @@
 (function() {
 	// constants
-	var BRACE_OPEN = '(';
-	var BRACE_CLOSE = ')';
-	var alphaNumRE = /[a-zA-Z0-9_$\[\]\,]/;
+	var BRACES = [
+		{open: '(', close: ')'},
+		{open: '[', close: ']'},
+		{open: '{', close: '}'},
+	];
+	var alphaNumRE = /[a-zA-Z0-9_$]/;
 
-	function Operator(prec, assoc) {
-		if (!(this instanceof Operator))
-			return new Operator(prec, assoc);
+	function Op(prec, assoc) {
+		if (!(this instanceof Op))
+			return new Op(prec, assoc);
 		this.precedence = prec;
 		this.associative = assoc || 'left';
 	}
 
 	var ops = {
-		'+': Operator(13),
-		'-': Operator(13),
-		'*': Operator(14),
-		'/': Operator(14),
-		'%': Operator(14),
-		'^': Operator(15, 'right'), // FIXME 14 according to spec
+		'+': Op(13),
+		'-': Op(13),
+		'*': Op(14),
+		'/': Op(14),
+		'%': Op(14),
+		'^': Op(15, 'right'), // FIXME 14 according to spec
 	};
 
 
@@ -26,7 +29,7 @@
 		return ch !== void 0 && alphaNumRE.test(ch);
 	};
 
-	function nBinder(fn) {
+	function compile(fn) {
 		// FIXME only binds one argument
 		var bound = Array.prototype.slice.call(arguments, 1);
 		var nArgs = fn.length;
@@ -41,15 +44,32 @@
 	};
 
 	function matchBraces(str, pos, dir, rootPrecedence) {
-		var depth = 0;
-		if (str[pos + dir] in ops && ops[str[pos + dir]].precedence <= rootPrecedence)
-			return pos;
+		var braceStack = [];
 		for (var i = pos + dir; str[i] != null; i += dir) {
-			if (str[i] == BRACE_OPEN)
-				depth++;
-			else if (str[i] == BRACE_CLOSE)
-				depth--;
-			if (depth === 0)
+			var braceType = null;
+			var isOpen = null;
+			for (var j = 0; j < BRACES.length; j++)
+				if (str[i] === BRACES[j].open) {
+					braceType = j;
+					isOpen = true;
+				} else if (str[i] === BRACES[j].close) {
+					braceType = j;
+					isOpen = false;
+				}
+			var isAlong = (!isOpen ^ dir === 1);
+			// break if close & right | open & left
+			// console.log(braceType, isOpen, dir, braceStack, str[i], braceStack.length === 0 && (braceType === null || !isAlong))
+			if (braceStack.length === 0 && (braceType === null || !isAlong)) {
+				// console.log('break', str, 'at', pos, 'when moving', dir)
+				return pos;
+			}
+			if (braceType !== null) {
+				if (isAlong)
+					braceStack.push(braceType);
+				else if (braceType === braceStack[braceStack.length - 1]) // FIXME error on mismatch
+					braceStack.pop();
+			}
+			if (braceStack.length === 0)
 				return i;
 		}
 		return pos;
@@ -62,10 +82,12 @@
 	};
 
 	function deinfix(str, infixOp, subs) {
-		var opPos = -1;
 		var prec = ops[infixOp].precedence;
+		var assoc = ops[infixOp].associative;
+		var method = assoc === 'left'? 'indexOf': 'lastIndexOf';
+		var opPos = assoc === 'left'? -1: str.length;
 		while (true) {
-			opPos = str.indexOf(infixOp, opPos + 1);
+			opPos = str[method](infixOp, opPos + 1); // FIXME
 			if (opPos == -1)
 				break;
 			var start = captureId(str, matchBraces(str, opPos, -1, prec), -1);
@@ -119,13 +141,14 @@
 			for (var key in config.prefix)
 				if (args.indexOf(key) === -1)
 					str = scopify(str, key);
-			return nBinder(Function(['cont'].concat(args), 'return ' + str + ';'), config.prefix);
+			return compile(Function(['cont'].concat(args), 'return ' + str + ';'), config.prefix);
 		};
 	};
 
 	// TODO
 	// - [ ] literal preprocessing (convert 4 to some object)
-	// - [ ] custom keywords (as in i the imaginary unit)
+	// - [x] custom keywords (as in i the imaginary unit)
+	//    - can be done via scope, so nope
 	// - [ ] operators as functions
 	// - [ ] unaries
 	// - [ ] array / object literal overloads
@@ -133,8 +156,9 @@
 	//   - [ ] argument names
 	//   - [ ] source
 	// - [ ] unsealed scope warning
+	// - [ ] context
 	// - [ ] custom precedence
-	// - [ ] right-associativity
+	// - [x] right-associativity
 
 
 	// export
